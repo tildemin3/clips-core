@@ -524,3 +524,4 @@ void IllegalLogicalNameMessage(
    WriteString(theEnv,STDERR,theFunction);
    WriteString(theEnv,STDERR,"' function.\n");
   }
+

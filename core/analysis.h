@@ -55,7 +55,14 @@ struct nandFrame
    struct nandFrame *next;
   };
 
+   /**
+    * @brief Performs variable analysis on the LHS patterns of a rule.
+    * @param theEnv The environment.
+    * @param patternPtr Pointer to the first pattern in the rule.
+    * @return True if an error was detected, false otherwise.
+    */
    bool                           VariableAnalysis(Environment *,struct lhsParseNode *);
 
 #endif
+
 

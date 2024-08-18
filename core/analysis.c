@@ -67,41 +67,152 @@
 /* LOCAL INTERNAL FUNCTION DEFINITIONS */
 /***************************************/
 
-   static bool                    GetVariables(Environment *,struct lhsParseNode *,ParseNodeType,struct nandFrame *);
-   static bool                    UnboundVariablesInPattern(Environment *,struct lhsParseNode *,unsigned short);
-   static bool                    PropagateVariableToNodes(Environment *,struct lhsParseNode *,ParseNodeType,
-                                                           CLIPSLexeme *,struct lhsParseNode *,
-                                                           int,bool,bool);
-   static struct lhsParseNode    *CheckExpression(Environment *,struct lhsParseNode *,struct lhsParseNode *,
-                                                  unsigned short,CLIPSLexeme *,unsigned short);
-   static void                    VariableReferenceErrorMessage(Environment *,
-                                                                CLIPSLexeme *,
-                                                                struct lhsParseNode *,
-                                                                int,
-                                                                CLIPSLexeme *,
-                                                                int);
-   static bool                    ProcessField(Environment *,
-                                               struct lhsParseNode *,
-                                               struct lhsParseNode *,
-                                               struct lhsParseNode *,
-                                               ParseNodeType,
-                                               struct nandFrame *);
-   static bool                    ProcessVariable(Environment *,
-                                               struct lhsParseNode *,
-                                               struct lhsParseNode *,
-                                               struct lhsParseNode *,
-                                               ParseNodeType,
-                                               struct nandFrame *);
-   static void                    VariableMixingErrorMessage(Environment *,CLIPSLexeme *);
-   static bool                    PropagateVariableDriver(Environment *,
-                                                          struct lhsParseNode *,
-                                                          struct lhsParseNode *,
-                                                          struct lhsParseNode *,
-                                                          ParseNodeType,CLIPSLexeme *,
-                                                          struct lhsParseNode *,
-                                                          bool,ParseNodeType);
-   static bool                    TestCEAnalysis(Environment *,struct lhsParseNode *,struct lhsParseNode *,bool,bool *,struct nandFrame *);
-   static void                    ReleaseNandFrames(Environment *,struct nandFrame *);
+/**
+ * @brief Gets variables from a pattern and propagates them.
+ * @param theEnv The environment.
+ * @param thePattern The pattern to analyze.
+ * @param patternType The type of pattern.
+ * @param theNandFrames The NAND frames.
+ * @return True if an error occurred, false otherwise.
+ */
+static bool                    GetVariables(Environment *theEnv,struct lhsParseNode *thePattern,ParseNodeType patternType,struct nandFrame *theNandFrames);
+
+/**
+ * @brief Checks for unbound variables in a pattern.
+ * @param theEnv The environment.
+ * @param thePattern The pattern to check.
+ * @param whichCE The CE number.
+ * @return True if unbound variables were found, false otherwise.
+ */
+static bool                    UnboundVariablesInPattern(Environment *theEnv,struct lhsParseNode *thePattern,unsigned short whichCE);
+
+/**
+ * @brief Propagates a variable to other nodes.
+ * @param theEnv The environment.
+ * @param thePattern The pattern containing the variable.
+ * @param patternType The type of pattern.
+ * @param variableName The name of the variable.
+ * @param theReference The reference node.
+ * @param startDepth The starting depth.
+ * @param assignReference Whether to assign the reference.
+ * @param ignoreVariableTypes Whether to ignore variable types.
+ * @return True if an error occurred, false otherwise.
+ */
+static bool                    PropagateVariableToNodes(Environment *theEnv,struct lhsParseNode *thePattern,ParseNodeType patternType,
+                                                        CLIPSLexeme *variableName,struct lhsParseNode *theReference,
+                                                        int startDepth,bool assignReference,bool ignoreVariableTypes);
+
+/**
+ * @brief Checks an expression for unbound variables.
+ * @param theEnv The environment.
+ * @param exprPtr The expression to check.
+ * @param lastOne The last node checked.
+ * @param whichCE The CE number.
+ * @param slotName The slot name.
+ * @param theField The field number.
+ * @return A pointer to the node with an unbound variable, or NULL if none found.
+ */
+static struct lhsParseNode    *CheckExpression(Environment *theEnv,struct lhsParseNode *exprPtr,struct lhsParseNode *lastOne,
+                                               unsigned short whichCE,CLIPSLexeme *slotName,unsigned short theField);
+
+/**
+ * @brief Prints an error message for a variable reference error.
+ * @param theEnv The environment.
+ * @param variableName The name of the variable.
+ * @param theExpression The expression containing the error.
+ * @param whichCE The CE number.
+ * @param slotName The slot name.
+ * @param theField The field number.
+ */
+static void                    VariableReferenceErrorMessage(Environment *theEnv,
+                                                             CLIPSLexeme *variableName,
+                                                             struct lhsParseNode *theExpression,
+                                                             int whichCE,
+                                                             CLIPSLexeme *slotName,
+                                                             int theField);
+
+/**
+ * @brief Processes a field in a pattern.
+ * @param theEnv The environment.
+ * @param theField The field to process.
+ * @param multifieldHeader The multifield header.
+ * @param patternHead The pattern head.
+ * @param patternType The type of pattern.
+ * @param theNandFrames The NAND frames.
+ * @return True if an error occurred, false otherwise.
+ */
+static bool                    ProcessField(Environment *theEnv,
+                                            struct lhsParseNode *theField,
+                                            struct lhsParseNode *multifieldHeader,
+                                            struct lhsParseNode *patternHead,
+                                            ParseNodeType patternType,
+                                            struct nandFrame *theNandFrames);
+
+/**
+ * @brief Processes a variable in a pattern.
+ * @param theEnv The environment.
+ * @param theVariable The variable to process.
+ * @param multifieldHeader The multifield header.
+ * @param patternHead The pattern head.
+ * @param patternType The type of pattern.
+ * @param theNandFrames The NAND frames.
+ * @return True if an error occurred, false otherwise.
+ */
+static bool                    ProcessVariable(Environment *theEnv,
+                                            struct lhsParseNode *theVariable,
+                                            struct lhsParseNode *multifieldHeader,
+                                            struct lhsParseNode *patternHead,
+                                            ParseNodeType patternType,
+                                            struct nandFrame *theNandFrames);
+
+/**
+ * @brief Prints an error message for variable mixing.
+ * @param theEnv The environment.
+ * @param variableName The name of the variable.
+ */
+static void                    VariableMixingErrorMessage(Environment *theEnv,CLIPSLexeme *variableName);
+
+/**
+ * @brief Drives the propagation of a variable.
+ * @param theEnv The environment.
+ * @param patternHead The pattern head.
+ * @param theNode The current node.
+ * @param multifieldHeader The multifield header.
+ * @param theType The type of variable.
+ * @param vari
+
+ableName The name of the variable.
+ * @param theReference The reference node.
+ * @param assignReference Whether to assign the reference.
+ * @param patternType The type of pattern.
+ * @return True if an error occurred, false otherwise.
+ */
+static bool                    PropagateVariableDriver(Environment *theEnv,
+                                                       struct lhsParseNode *patternHead,
+                                                       struct lhsParseNode *theNode,
+                                                       struct lhsParseNode *multifieldHeader,
+                                                       ParseNodeType theType,CLIPSLexeme *variableName,
+                                                       struct lhsParseNode *theReference,
+                                                       bool assignReference,ParseNodeType patternType);
+
+/**
+ * @brief Analyzes a test CE.
+ * @param theEnv The environment.
+ * @param patternPtr The pattern containing the test CE.
+ * @param theExpression The expression to analyze.
+ * @param secondary Whether this is a secondary expression.
+ * @param errorFlag Pointer to the error flag.
+ * @param theNandFrames The NAND frames.
+ * @return True if an error occurred, false otherwise.
+ */
+static bool                    TestCEAnalysis(Environment *theEnv,struct lhsParseNode *patternPtr,struct lhsParseNode *theExpression,bool secondary,bool *errorFlag,struct nandFrame *theNandFrames);
+
+/**
+ * @brief Releases NAND frames.
+ * @param theEnv The environment.
+ * @param theFrames The NAND frames to release.
+ */
+static void                    ReleaseNandFrames(Environment *theEnv,struct nandFrame *theFrames);
 
 /******************************************************************/
 /* VariableAnalysis: Propagates variables references to other     */
@@ -905,7 +1016,9 @@ static bool UnboundVariablesInPattern(
          else if ((andField->pnType == PREDICATE_CONSTRAINT_NODE) ||
                   (andField->pnType == RETURN_VALUE_CONSTRAINT_NODE))
            {
-            rv = CheckExpression(theEnv,andField->expression,NULL,pattern,slotName,theField);
+            rv = CheckExpression(theEnv,andField->expression,NULL,pattern,slotName,the
+
+Field);
             if (rv != NULL) return true;
            }
 
@@ -1138,5 +1251,6 @@ static void VariableMixingErrorMessage(
   }
 
 #endif /* (! RUN_TIME) && (! BLOAD_ONLY) && DEFRULE_CONSTRUCT */
+
 
 
