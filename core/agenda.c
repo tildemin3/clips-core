@@ -920,9 +920,7 @@ void ReorderAgenda(
    /* remove them from the agenda.    */
    /*=================================*/
 
-   theModuleItem = GetDefruleModule
-
-Item(theEnv,theModule);
+   theModuleItem = GetDefruleModuleItem(theEnv,theModule);
    theActivation = theModuleItem->agenda;
    theModuleItem->agenda = NULL;
 
