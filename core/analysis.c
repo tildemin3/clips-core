@@ -1016,9 +1016,7 @@ static bool UnboundVariablesInPattern(
          else if ((andField->pnType == PREDICATE_CONSTRAINT_NODE) ||
                   (andField->pnType == RETURN_VALUE_CONSTRAINT_NODE))
            {
-            rv = CheckExpression(theEnv,andField->expression,NULL,pattern,slotName,the
-
-Field);
+            rv = CheckExpression(theEnv,andField->expression,NULL,pattern,slotName,theField);
             if (rv != NULL) return true;
            }
 
